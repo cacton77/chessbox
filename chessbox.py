@@ -3,6 +3,7 @@
 import re
 import json
 import chess
+from chess import Board
 from chessdotcom import ( 
 	get_player_profile,
 	is_player_online,
@@ -23,61 +24,155 @@ class Chessbox:
 		with open('user_data.json') as f:
 			user_data = json.load(f)
 
-		if not user_data["username"]:
-			print("please enter user data:")
-			user_data["username"] = input("username: ")
-			user_data["password"] = input("password: ")
-			with open('user_data.json', 'w') as f:
-				json.dump(user_data, f)
+		while True:
+			if not user_data["p1"]:
+				"""
+				If primary user isn't saved, ask for login.
+				"""
+				self.chessbox_welcome()
+				print("Please enter chess.com user information:")
+				username = input("username: ")
+				while self.check_valid_username(username) == False:
+					print("Invalid username.")
+					username = input("username: ")
 
-		self.username = user_data["username"]
-		self.password = user_data["password"]
+				password = input("password: ")
+				while self.check_valid_password(password) == False:
+					print("Incorrect password.")
+					username = input("password: ")
 
-		if not user_data["curr_opponent"]:
-			games_wb_url = self.print_games_wb()
-			while True:
-				try:
-					index = int(input("Please select a game: "))
-				except ValueError:
-					print("Input a number in the above range.")
-					continue
-				if index < len(games_wb_url['w']):
-					player_white = games_wb_url['w'][index]
-					player_black = games_wb_url['b'][index]
-					if player_white == self.username:
-						user_data["curr_opponent"] = player_black
-					else:
-						user_data["curr_opponent"] = player_white
-					user_data["curr_game_url"] = games_wb_url['url'][index]
+				user_data["p1"] = username
+				user_data["p1_password"] = password
+				self.save_state(user_data)
+				break
+			else:
+				"""
+				If primary user is saved, ask if player would like to play as this user.
+				"""
+				yn = input("Play as " + user_data["p1"] + "? [y/n]: ") 
+				if yn == 'y':
 					break
-				else:
-					print("Input a number in the above range.")
+				elif yn == 'n':
+					user_data["p1"] = ""
+					user_data["p1_password"] = ""
+					user_data["p2"] = ""
+					user_data["p2_password"] = ""
+					user_data["curr_game"] = ""
 					continue
-			with open('user_data.json', 'w') as f:
-				json.dump(user_data, f)
+				else:
+					continue
 
-		self.curr_opponent = user_data["curr_opponent"]
-		self.curr_game_url = user_data["curr_game_url"]
+		self.player_1 = User(user_data["p1"], user_data["p1_password"])
 
-		if not user_data["fen"]:
-			game = self.get_game_by_url(self.curr_game_url)
-			result = re.search("(?<=CurrentPosition\s\").*(?=\")", game["pgn"])
-			user_data["fen"] = result.group()
-			with open('user_data.json', 'w') as f:
-				json.dump(user_data, f)
+		while True:
+			if not user_data["curr_game_url"]:
+				"""
+				If game isn't saved, select game and save p2 username.
+				"""
+				games_wb_url = self.player_1.print_games_wb()
+				while True:
+					try:
+						index = int(input("Please select a game by its index: "))
+					except ValueError:
+						print("Select one of the above games.")
+						continue
+					if index < len(games_wb_url['w']):
+						player_white = games_wb_url['w'][index]
+						player_black = games_wb_url['b'][index]
+						if player_white == self.player_1.username:
+							user_data["p2"] = player_black
+						else:
+							user_data["p2"] = player_white
+						user_data["curr_game_url"] = games_wb_url['url'][index]
+						user_data["fen"] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+						break
+					else:
+						print("Select one of the above games.")
+						continue
+				"""
+				Ask for p2 login.
+				"""
+				while True:
+					yn = input(user_data["p2"] + " playing on same board? [y/n]: ")
+					if yn == 'y':
+						password = input("password: ")
+						if self.check_valid_password(password) == False:
+							print("Incorrect password.")
+							continue
+						user_data["p2_password"] = password
+						break
+					elif yn == 'n':
+						password = ""
+						user_data["p2_password"] = password
+						break
+					else:
+						continue
+				self.save_state(user_data)
+				break
+			else:
+				"""
+				If game is saved, ask if player wants to continue the game.
+				"""
+				print(self.player_1.get_game_wb_by_url(user_data["curr_game_url"]))
+				yn = input("Continue game? [y/n]: ")
+				if yn == 'y':
+					break
+				elif yn == 'n':
+					user_data["curr_game_url"] = ""
+					continue
+				else:
+					continue
 
-		self.fen = user_data["fen"]
+		self.player_2 = User(user_data["p2"], user_data["p2_password"])
 
+		self.game = Game(self.player_1, self.player_2, user_data["curr_game_url"], user_data["fen"])
+
+
+	def chessbox_welcome(self):
+		"""
+		Welcome screen for chessbox
+		"""
+		print("Welcome to chessbox live!")
+
+	def check_valid_username(self, username : str):
+		"""
+		Checks user exists. Implement later.
+		"""
+		return True
+
+	def check_valid_password(self, password : str):
+		"""
+		Checks password is valid. Implement later.
+		"""
+		return True
 
 	def is_opponent_online(self):
-		return is_player_online(self.curr_opponent)
+		return self.game.is_opponent_online()
 
 	def is_move_ready(self):
-		games = self.get_current_games_to_move_list()
-		for game in games:
-			if game["url"] == self.curr_game_url:
-				return True
-		return False
+		return self.game.is_move_ready()
+
+	def save_state(self):
+		user_data = {"p1": self.player_1.username, 
+					 "p1_password": self.player_1.password, 
+					 "p2": player_2, 
+					 "p2_password": player_2.password,
+					 "curr_game_url": self.game.url,
+					 "fen": self.game.fen}
+		with open('user_data.json', 'w') as f:
+				json.dump(user_data, f)
+
+	def save_state(self, user_data : dict):
+		with open('user_data.json', 'w') as f:
+				json.dump(user_data, f)
+
+
+class User:
+
+	def __init__(self, username : str, password : str):
+		
+		self.username = username
+		self.password = password
 
 	def get_games_wb_url(self):
 		"""
@@ -105,6 +200,21 @@ class Chessbox:
 		for game in games:
 			if game["url"] == url:
 				return game
+
+	def get_game_wb_by_url(self, url : str):
+		games_wb_url = self.get_games_wb_url()
+		games_w = games_wb_url['w']
+		games_b = games_wb_url['b']
+		games_url = games_wb_url['url']
+		for i in range(0,len(games_url)):
+			if games_url[i] == url:
+				player_white = games_w[i]
+				player_black = games_w[i]
+				if player_white == self.username:
+					game_wb = "Playing white against " + player_black + "."
+				else:
+					game_wb = "Playing black against " + player_white + "."
+				return game_wb
 
 	def print_games_wb(self):
 		"""
@@ -146,3 +256,34 @@ class Chessbox:
 	def print_current_games_to_move(self):
 		games_to_move_dict = self.get_current_games_to_move_dict()
 		print(json.dumps(games_to_move_dict, indent = 4, sort_keys= True))
+
+class Game:
+
+	def __init__(self, player_1 : User, player_2 : User, url : str, fen : str):
+
+		self.player_1 = player_1
+		self.player_2 = player_2
+		self.url = url
+		self.fen = self.get_fen()
+		print(self.fen)
+
+		self.board = Board(self.fen)
+
+	def get_fen(self):
+		game = self.player_1.get_game_by_url(self.url)
+		result = re.search("(?<=CurrentPosition\s\").*(?=\")", game["pgn"])
+		fen = result.group()
+		return fen
+
+	def is_opponent_online(self):
+		return is_player_online(self.player_2)
+
+	def is_move_ready(self):
+		games = self.get_current_games_to_move_list()
+		for game in games:
+			if game["url"] == self.url:
+				return True
+		return False
+
+	def __str__(self) -> str:
+		return str(self.board)
