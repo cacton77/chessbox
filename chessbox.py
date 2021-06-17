@@ -57,7 +57,7 @@ class Chessbox:
 					user_data["p1_password"] = ""
 					user_data["p2"] = ""
 					user_data["p2_password"] = ""
-					user_data["curr_game"] = ""
+					user_data["curr_game_url"] = ""
 					continue
 				else:
 					continue
@@ -84,6 +84,8 @@ class Chessbox:
 						else:
 							user_data["p2"] = player_white
 						user_data["curr_game_url"] = games_wb_url['url'][index]
+						user_data["round"] = 1
+						user_data["turn"] = 'w'
 						user_data["fen"] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 						break
 					else:
@@ -125,7 +127,9 @@ class Chessbox:
 
 		self.player_2 = User(user_data["p2"], user_data["p2_password"])
 
-		self.game = Game(self.player_1, self.player_2, user_data["curr_game_url"], user_data["fen"])
+		self.game = Game(self.player_1, self.player_2, user_data["curr_game_url"], user_data["round"], user_data["turn"], user_data["fen"])
+
+		print(self.game)
 
 
 	def chessbox_welcome(self):
@@ -146,6 +150,12 @@ class Chessbox:
 		"""
 		return True
 
+	def load_saved_game(self):
+		"""
+		Implement this method later.
+		"""
+		self.game = self.game
+
 	def is_opponent_online(self):
 		return self.game.is_opponent_online()
 
@@ -158,7 +168,9 @@ class Chessbox:
 					 "p2": player_2, 
 					 "p2_password": player_2.password,
 					 "curr_game_url": self.game.url,
-					 "fen": self.game.fen}
+					 "round": self.game.round.round,
+					 "turn": self.game.round.turn,
+					 "fen": self.game.round.fen}
 		with open('user_data.json', 'w') as f:
 				json.dump(user_data, f)
 
@@ -209,12 +221,13 @@ class User:
 		for i in range(0,len(games_url)):
 			if games_url[i] == url:
 				player_white = games_w[i]
-				player_black = games_w[i]
+				player_black = games_b[i]
 				if player_white == self.username:
 					game_wb = "Playing white against " + player_black + "."
 				else:
 					game_wb = "Playing black against " + player_white + "."
 				return game_wb
+		return "error with get_game_wb_by_url()!"
 
 	def print_games_wb(self):
 		"""
@@ -257,33 +270,133 @@ class User:
 		games_to_move_dict = self.get_current_games_to_move_dict()
 		print(json.dumps(games_to_move_dict, indent = 4, sort_keys= True))
 
+class Round:
+
+	def __init__(self, round_ : int, turn : str, fen : str):
+		self.round = round_
+		self.turn = turn
+		self.fen = fen
+
+	def get_round(self):
+		return self.round
+
+	def get_turn(self):
+		return self.turn
+
+	def get_fen(self):
+		return self.fen
+
+	def __str__(self) -> str:
+		return str(self.round) + self.turn + ") " + self.fen
+
 class Game:
 
-	def __init__(self, player_1 : User, player_2 : User, url : str, fen : str):
+	def __init__(self, player_1 : User, player_2 : User, url : str, round_ : int, turn : str, fen : str):
 
 		self.player_1 = player_1
 		self.player_2 = player_2
 		self.url = url
-		self.fen = self.get_fen()
-		print(self.fen)
+		self.round = Round(round_, turn, fen)
+		self.board = Board(fen)		
 
-		self.board = Board(self.fen)
+	def update(self):
+		game_data = self.get_game_data()
+		last_round = self.round
+		curr_fen = self.get_fen(game_data)
+		if curr_fen != last_round.fen:
+			curr_round = self.get_round(curr_fen)
+			curr_turn = self.get_turn(curr_fen)
+			curr_round = Round(curr_round, curr_turn, curr_fen)
+			moves = self.get_moves(game_data, last_round, curr_round)
+			for move in moves:
+				print(self.board.parse_san(move))
+				self.board.push(self.board.parse_san(move))
+				print(self.board)
+				input()
+			self.round = curr_round
+			self.save_state()
 
-	def get_fen(self):
-		game = self.player_1.get_game_by_url(self.url)
-		result = re.search("(?<=CurrentPosition\s\").*(?=\")", game["pgn"])
+	def get_game_data(self):
+		return self.player_1.get_game_by_url(self.url)
+
+	def get_round(self, fen: str):
+		result = re.search("\d*$", fen)
+		round_ = result.group()
+		return int(round_)
+
+	def get_turn(self, fen : str):
+		result = re.search("(?<=\s)[wb]{1}(?=\s)", fen)
+		turn = result.group()
+		return turn
+
+	def get_fen(self, game_data : dict):
+		result = re.search("(?<=CurrentPosition\s\").*(?=\")", game_data["pgn"])
 		fen = result.group()
 		return fen
+
+	def get_moves(self, game_data : dict, round_i : Round, round_o : Round):
+		moves = []
+		result = re.search("(?<=\n\n).*", game_data["pgn"])
+		move_string = result.group()
+		print(move_string)
+		round_i_num = round_i.round
+		round_i_turn = round_i.turn
+		round_o_num = round_o.round
+		round_o_turn = round_o.turn
+		turn = round_i_turn
+		for r in range(round_i_num, round_o_num + 1):
+			if r == round_o_num and round_o_turn == 'w':
+					return moves
+			if turn == 'w':
+				move = self.get_move(r, 'w', move_string)
+				moves.append(move)
+				turn = 'b'
+			if r == round_o_num and round_o_turn == 'b':
+				return moves
+			if turn == 'b':
+				move = self.get_move(r, 'b', move_string)
+				moves.append(move)
+				turn = 'w'
+
+	def get_move(self, round_ : int, turn : str, move_string : str):
+		if round_ == 1:
+			if turn == 'w':
+				round_ = str(round_) + "\."
+			elif turn == 'b':
+				round_ = str(round_) + "\.\.\."
+		else:
+			if turn == 'w':
+				round_ = "\s" + str(round_) + "\."
+			elif turn == 'b':
+				round_ = "\s" + str(round_) + "\.\.\."
+		result = re.search("(?<=" + round_ + "\s)\S*", move_string)
+		move = result.group()
+		return move
+
+	def print_pgn(self):
+		game = self.player_1.get_game_by_url(self.url)
+		print(game["pgn"])
 
 	def is_opponent_online(self):
 		return is_player_online(self.player_2)
 
 	def is_move_ready(self):
-		games = self.get_current_games_to_move_list()
-		for game in games:
+		games_to_move = self.get_current_games_to_move_list()
+		for game in games_to_move:
 			if game["url"] == self.url:
 				return True
 		return False
+
+	def save_state(self):
+		with open('user_data.json') as f:
+			user_data = json.load(f)
+
+		user_data['round'] = self.round.round
+		user_data['turn'] = self.round.turn
+		user_data['fen'] = self.round.fen
+
+		with open('user_data.json', 'w') as f:
+				json.dump(user_data, f)
 
 	def __str__(self) -> str:
 		return str(self.board)
