@@ -128,7 +128,7 @@ class Chessbox:
 		self.player_2 = User(user_data["p2"], user_data["p2_password"])
 
 		self.game = Game(self.player_1, self.player_2, user_data["curr_game_url"], user_data["round"], user_data["turn"], user_data["fen"])
-
+		print(self.game.url)
 		print(self.game)
 
 
@@ -296,20 +296,26 @@ class Game:
 		self.player_1 = player_1
 		self.player_2 = player_2
 		self.url = url
+		if round_ == 1 and turn == 'w':
+			fen = self.get_starting_fen()
 		self.round = Round(round_, turn, fen)
 		self.board = Board(fen)		
 
 	def update(self):
 		game_data = self.get_game_data()
 		last_round = self.round
-		curr_fen = self.get_fen(game_data)
+		curr_fen = self.get_current_fen()
 		if curr_fen != last_round.fen:
 			curr_round = self.get_round(curr_fen)
 			curr_turn = self.get_turn(curr_fen)
 			curr_round = Round(curr_round, curr_turn, curr_fen)
-			moves = self.get_moves(game_data, last_round, curr_round)
-			for move in moves:
-				print(self.board.parse_san(move))
+			moves_rounds_turns = self.get_moves(last_round, curr_round)
+			rounds_turns = moves_rounds_turns["rounds_turns"]
+			moves = moves_rounds_turns["moves"]
+			for i in range(0, len(moves)):
+				round_turn = rounds_turns[i]
+				move = moves[i]
+				print(round_turn + str(self.board.parse_san(move)))
 				self.board.push(self.board.parse_san(move))
 				print(self.board)
 				input()
@@ -329,12 +335,24 @@ class Game:
 		turn = result.group()
 		return turn
 
-	def get_fen(self, game_data : dict):
+	def get_starting_fen(self):
+		game_data = self.get_game_data()
+		result = re.search("(?<=\[FEN\s\").*(?=\")", game_data["pgn"])
+		if result is None:
+			fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+		else:
+			fen = result.group()
+		return fen
+
+	def get_current_fen(self):
+		game_data = self.get_game_data()
 		result = re.search("(?<=CurrentPosition\s\").*(?=\")", game_data["pgn"])
 		fen = result.group()
 		return fen
 
-	def get_moves(self, game_data : dict, round_i : Round, round_o : Round):
+	def get_moves(self, round_i : Round, round_o : Round):
+		game_data = self.get_game_data()
+		rounds_turns = []
 		moves = []
 		result = re.search("(?<=\n\n).*", game_data["pgn"])
 		move_string = result.group()
@@ -346,14 +364,16 @@ class Game:
 		turn = round_i_turn
 		for r in range(round_i_num, round_o_num + 1):
 			if r == round_o_num and round_o_turn == 'w':
-					return moves
+					return {"rounds_turns": rounds_turns, "moves": moves}
 			if turn == 'w':
+				rounds_turns.append(str(r) + turn + ". ")
 				move = self.get_move(r, 'w', move_string)
 				moves.append(move)
 				turn = 'b'
 			if r == round_o_num and round_o_turn == 'b':
-				return moves
+				return {"rounds_turns": rounds_turns, "moves": moves}
 			if turn == 'b':
+				rounds_turns.append(str(r) + turn + ". ")
 				move = self.get_move(r, 'b', move_string)
 				moves.append(move)
 				turn = 'w'
