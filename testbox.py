@@ -5,6 +5,4 @@ import chess
 import time
 
 ql_box = Chessbox()
-while True:
-	ql_box.game.update()
-	time.sleep(1)
+ql_box.run()

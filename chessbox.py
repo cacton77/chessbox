@@ -10,7 +10,8 @@ from chessdotcom import (
 	get_player_current_games,
 	get_player_current_games_to_move
 )
-from chessbox_states import Startup
+import chessbox_states as cs
+
 
 class Chessbox:
 
@@ -19,53 +20,115 @@ class Chessbox:
 		Initiates Chessbox by looking for user data in user_data.json
 		If data isn't found the user is prompted for inputs.
 		"""
-		self.state = Startup()
+		self.user_data = {}
+		self.player_1 = None
+		self.player_2 = None
+		self.game = NullGame()
+		self.state = cs.Startup()
 
-		with open('user_data.json') as f:
-			user_data = json.load(f)
-
+	def run(self):
 		while True:
-			if not user_data["p1"]:
+			if str(self.state) == "Startup":
+				self.startup()
+			elif str(self.state) == "LogIn":
+				self.login()
+			elif str(self.state) == "MainMenu":
+				self.main_menu()
+			elif str(self.state) == "LoadGame":
+				self.load_game()
+				self.state = cs.Idle()
+			elif str(self.state) == "Idle":
+				self.game.update()
+			elif str(self.state) == "GetUserData":
+				self.state = cs.LoggedIn()
+			elif str(self.state) == "WaitForOpponentMove":
+				pass
+			elif str(self.state) == "MoveReady":
+				pass
+			elif str(self.state) == "Exit":
+				self.exit()
+			else:
+				print("State error!")
+				exit()
+
+	def chessbox_welcome(self):
+		"""
+		Welcome screen for chessbox
+		"""
+		print("Welcome to chessbox live!")
+
+	def startup(self):
+		with open('user_data.json') as f:
+			self.user_data = json.load(f)
+		self.chessbox_welcome()
+		self.state = self.load_user()
+
+	def load_user(self):
+		
+		while True:
+			if not self.user_data["p1"]:
 				"""
 				If primary user isn't saved, ask for login.
 				"""
-				self.chessbox_welcome()
-				print("Please enter chess.com user information:")
-				username = input("username: ")
-				while self.check_valid_username(username) == False:
-					print("Invalid username.")
-					username = input("username: ")
-
-				password = input("password: ")
-				while self.check_valid_password(password) == False:
-					print("Incorrect password.")
-					username = input("password: ")
-
-				user_data["p1"] = username
-				user_data["p1_password"] = password
-				self.save_state(user_data)
-				break
+				return cs.LogIn()
 			else:
 				"""
 				If primary user is saved, ask if player would like to play as this user.
 				"""
-				yn = input("Play as " + user_data["p1"] + "? [y/n]: ") 
+				yn = input("Play as " + self.user_data["p1"] + "? [y/n]: ") 
 				if yn == 'y':
-					break
+					self.player_1 = User(self.user_data["p1"], self.user_data["p1_password"])
+					return cs.MainMenu()
 				elif yn == 'n':
-					user_data["p1"] = ""
-					user_data["p1_password"] = ""
-					user_data["p2"] = ""
-					user_data["p2_password"] = ""
-					user_data["curr_game_url"] = ""
+					self.user_data["p1"] = ""
+					self.user_data["p1_password"] = ""
+					self.user_data["p2"] = ""
+					self.user_data["p2_password"] = ""
+					self.user_data["curr_game_url"] = ""
 					continue
 				else:
 					continue
 
-		self.player_1 = User(user_data["p1"], user_data["p1_password"])
+	def login(self):
+		print("Please enter chess.com user information:")
+		username = input("username: ")
+		while self.check_valid_username(username) == False:
+			print("Invalid username.")
+			username = input("username: ")
+		password = input("password: ")
+		while self.check_valid_password(password) == False:
+			print("Incorrect password.")
+			username = input("password: ")
+		self.user_data["p1"] = username
+		self.user_data["p1_password"] = password
+		self.save_user()
+		self.player_1 = User(self.user_data["p1"], self.user_data["p1_password"])
+		self.state = cs.MainMenu()
 
+	def main_menu(self):
+		print("0) Load Game")
+		print("1) View User Data")
+		print("2) Sign Out")
+		print("3) Exit")
+		option = input("Select an option: ")
+		if option == '0':
+			event = 'load_game'
+		elif option == '1':
+			event = 'get_user_data'
+		elif option == '2':
+			event = 'sign_out'
+		elif option == '3':
+			event = 'exit'
+		else:
+			event = ""
+		self.state = self.state.on_event(event)
+
+	def load_game(self):
+		"""
+		Loads a saved game.
+		"""
 		while True:
-			if not user_data["curr_game_url"]:
+			if not self.user_data["curr_game_url"]:
 				"""
 				If game isn't saved, select game and save p2 username.
 				"""
@@ -80,13 +143,13 @@ class Chessbox:
 						player_white = games_wb_url['w'][index]
 						player_black = games_wb_url['b'][index]
 						if player_white == self.player_1.username:
-							user_data["p2"] = player_black
+							self.user_data["p2"] = player_black
 						else:
-							user_data["p2"] = player_white
-						user_data["curr_game_url"] = games_wb_url['url'][index]
-						user_data["round"] = 1
-						user_data["turn"] = 'w'
-						user_data["fen"] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+							self.user_data["p2"] = player_white
+						self.user_data["curr_game_url"] = games_wb_url['url'][index]
+						self.user_data["round"] = 1
+						self.user_data["turn"] = 'w'
+						self.user_data["fen"] = ""
 						break
 					else:
 						print("Select one of the above games.")
@@ -95,48 +158,46 @@ class Chessbox:
 				Ask for p2 login.
 				"""
 				while True:
-					yn = input(user_data["p2"] + " playing on same board? [y/n]: ")
+					yn = input(self.user_data["p2"] + " playing on same board? [y/n]: ")
 					if yn == 'y':
 						password = input("password: ")
 						if self.check_valid_password(password) == False:
 							print("Incorrect password.")
 							continue
-						user_data["p2_password"] = password
+						self.user_data["p2_password"] = password
 						break
 					elif yn == 'n':
 						password = ""
-						user_data["p2_password"] = password
+						self.user_data["p2_password"] = password
 						break
 					else:
 						continue
-				self.save_state(user_data)
 				break
 			else:
 				"""
 				If game is saved, ask if player wants to continue the game.
 				"""
-				print(self.player_1.get_game_wb_by_url(user_data["curr_game_url"]))
+				print(self.player_1.get_game_wb_by_url(self.user_data["curr_game_url"]))
 				yn = input("Continue game? [y/n]: ")
 				if yn == 'y':
 					break
 				elif yn == 'n':
-					user_data["curr_game_url"] = ""
+					self.user_data["curr_game_url"] = ""
 					continue
 				else:
 					continue
 
-		self.player_2 = User(user_data["p2"], user_data["p2_password"])
+		self.player_2 = User(self.user_data["p2"], self.user_data["p2_password"])
 
-		self.game = Game(self.player_1, self.player_2, user_data["curr_game_url"], user_data["round"], user_data["turn"], user_data["fen"])
+		self.state = cs.GameLoaded()
+
+		self.game = Game(self.player_1, self.player_2, self.user_data["curr_game_url"], self.user_data["round"], self.user_data["turn"], self.user_data["fen"])
+		self.save()
+		print()
 		print(self.game.url)
+		print()
 		print(self.game)
-
-
-	def chessbox_welcome(self):
-		"""
-		Welcome screen for chessbox
-		"""
-		print("Welcome to chessbox live!")
+		print()
 
 	def check_valid_username(self, username : str):
 		"""
@@ -150,33 +211,27 @@ class Chessbox:
 		"""
 		return True
 
-	def load_saved_game(self):
-		"""
-		Implement this method later.
-		"""
-		self.game = self.game
-
 	def is_opponent_online(self):
 		return self.game.is_opponent_online()
 
 	def is_move_ready(self):
 		return self.game.is_move_ready()
 
-	def save_state(self):
-		user_data = {"p1": self.player_1.username, 
-					 "p1_password": self.player_1.password, 
-					 "p2": player_2, 
-					 "p2_password": player_2.password,
-					 "curr_game_url": self.game.url,
-					 "round": self.game.round.round,
-					 "turn": self.game.round.turn,
-					 "fen": self.game.round.fen}
+	def save_user(self):
 		with open('user_data.json', 'w') as f:
-				json.dump(user_data, f)
+			json.dump(self.user_data, f)
 
-	def save_state(self, user_data : dict):
+	def save(self):
+		self.user_data["round"] = self.game.round.round
+		self.user_data["turn"] = self.game.round.turn
+		self.user_data["fen"] = self.game.round.fen
 		with open('user_data.json', 'w') as f:
-				json.dump(user_data, f)
+			json.dump(self.user_data, f)
+
+	def exit(self):
+		self.save()
+		print("shutting down...")
+		exit()
 
 
 class User:
@@ -233,6 +288,7 @@ class User:
 		"""
 		Prints list of games as strings with players associated with colors.
 		"""
+		print("Loading games...")
 		games_wb_url = self.get_games_wb_url()
 		games_w = games_wb_url['w']
 		games_b = games_wb_url['b']
@@ -320,7 +376,7 @@ class Game:
 				print(self.board)
 				input()
 			self.round = curr_round
-			self.save_state()
+			self.save()
 
 	def get_game_data(self):
 		return self.player_1.get_game_by_url(self.url)
@@ -356,7 +412,7 @@ class Game:
 		moves = []
 		result = re.search("(?<=\n\n).*", game_data["pgn"])
 		move_string = result.group()
-		print(move_string)
+		#print(move_string)
 		round_i_num = round_i.round
 		round_i_turn = round_i.turn
 		round_o_num = round_o.round
@@ -407,7 +463,7 @@ class Game:
 				return True
 		return False
 
-	def save_state(self):
+	def save(self):
 		with open('user_data.json') as f:
 			user_data = json.load(f)
 
@@ -420,3 +476,15 @@ class Game:
 
 	def __str__(self) -> str:
 		return str(self.board)
+
+class NullRound(Round):
+
+	def __init__(self):
+		self.round = 0
+		self.turn = ""
+		self.fen = ""
+
+class NullGame(Game):
+
+	def __init__(self):
+		self.round = NullRound()
