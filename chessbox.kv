@@ -1,0 +1,227 @@
+#:kivy 2.0.0
+
+<BoxLayout>
+	
+	
+
+<LoginInput>
+	multiline: False
+	font_size: 20
+	background_color: 112, 84, 63, .78
+	write_tab: False
+
+<HomeScreenButton>
+	pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+	size_hint: (0.5, 0.4)
+
+<BoardGrid>
+	id: grid
+	rows: 8
+	cols: 8
+	width: self.height
+
+<GameCarouselButton>
+	size_hint: (0.8, 0.8)
+	pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+	background_color: 0, 0, 0, 0
+	on_press: root.press
+	BoxLayout:
+		size: root.size
+		orientation: 'vertical'
+		pos: root.pos
+		BoardGrid:
+			id: board_grid
+			pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+			size_hint: (0.5, 0.5)
+		Label:
+			id: p1vp2
+			font: "DejaVuSans"
+			font_size: 14
+			size_hint: (1, 0.2)
+	
+
+<GameCarousel>
+	direction: "bottom"
+	pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+
+<GameBoard>
+
+	Label:
+		font: "DejaVuSans"
+		font_size: 20
+		size: root.height * 0.8, root.height * 0.8
+		text: "JLKSJDFLKJSDLKFJ"
+
+		canvas.before:
+			Rectangle:
+				source: "images/chessboard.jpg"
+				size: self.size
+
+<LoginScreen>
+
+	username: username
+	password: password
+
+	BoxLayout:
+		orientation: "vertical"
+		size: root.width, root.height
+		canvas.before:
+			Rectangle:
+				source: "images/greenfelt.png"
+				size: self.size
+				pos: self.pos
+		spacing: 10
+		padding: 10
+
+		Image:
+			source: "images/icon.png"
+			pos_hint: {'center_x': 0.5}
+
+		Label:
+			text: "Chessbox"
+			font_size: 40
+			bold: True
+			pos_hint: {'center_x': 0.5}
+
+		LoginInput:
+			id: username
+			hint_text: "username"
+			pos_hint: {'center_x': 0.5}
+		LoginInput:
+			id: password
+			hint_text: "password"
+			on_text_validate: root.login_press()
+			pos_hint: {'center_x': 0.5}
+		Button:
+			text: "Log In"
+			font_size: 20
+			background_color: (187/255.0, 226/255.0, 156/255.0, 1)
+			on_press: root.login_press()
+			pos_hint: {'center_x': 0.5}
+
+
+<HomeScreen>
+	FloatLayout:
+		size: root.width, root.height
+
+		canvas.before:
+			Rectangle:
+				source: "images/background.jpg"
+				size: self.size
+				pos: self.pos
+
+		Carousel:
+			id: carousel
+			direction: "right"
+			HomeScreenButton:
+				text: "Play"
+				on_press:
+					root.manager.transition.direction = 'down'
+            		root.manager.current = 'load'
+			HomeScreenButton:
+				text: "User"
+				on_press: root.press()
+			HomeScreenButton:
+				text: "Settings"
+				on_press: root.press()
+			HomeScreenButton:
+				text: "Sign Out"
+				on_press: root.logout_press()
+			HomeScreenButton:
+				text: "Exit"
+				on_press: root.press()
+
+		BoxLayout:
+			orientation: "horizontal"
+			pos_hint: {'x': 0, 'y': 0}
+			size_hint: (1, 0.1)
+			spacing: 0
+			padding: 0
+
+			Button:
+				text: "<-"
+				on_press: carousel.load_previous()
+			Button:
+				text: "->"
+				on_press: carousel.load_next(mode='next')
+			Button:
+				text: "o"
+				on_press: carousel.current_slide.trigger_action(duration=0.1)
+			Button:
+				text: "x"
+				on_press: 
+					root.manager.transition.direction = 'up'
+            		root.manager.current = 'login'
+
+<LoadScreen>
+	FloatLayout:
+		size: root.width, root.height
+
+		canvas.before:
+			Rectangle:
+				source: "images/background.jpg"
+				size: self.size
+				pos: self.pos
+
+		GameCarousel:
+			id: game_carousel
+
+		BoxLayout:
+			orientation: "horizontal"
+			pos_hint: {'x': 0, 'y': 0}
+			size_hint: (1, 0.1)
+			spacing: 0
+			padding: 0
+
+			Button:
+				text: "^"
+				on_press: game_carousel.load_previous()
+			Button:
+				text: "v"
+				on_press: game_carousel.load_next(mode='next')
+			Button:
+				text: "o"
+				on_press: root.load_game("thing")
+			Button:
+				text: "x"
+				on_press:
+					root.manager.transition.direction = 'up'
+            		root.manager.current = 'home'
+
+<GameScreen>
+	FloatLayout:
+		size: root.width, root.height
+
+		canvas.before:
+			Rectangle:
+				source: "images/background.jpg"
+				size: self.size
+				pos: self.pos
+
+		BoardGrid:
+			id: board_grid
+			pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+			size_hint: (0.7, 0.7)
+
+		BoxLayout:
+			orientation: "horizontal"
+			pos_hint: {'x': 0, 'y': 0}
+			size_hint: (1, 0.1)
+			spacing: 0
+			padding: 0
+
+			Button:
+				text: "<-"
+				on_press: pass
+			Button:
+				text: "->"
+				on_press: pass
+			Button:
+				text: "o"
+				on_press: pass
+			Button:
+				text: "x"
+				on_press: 
+					root.manager.transition.direction = 'up'
+            		root.manager.current = 'load'
+		

@@ -27,42 +27,103 @@ class Chessbox:
 		self.game = NullGame()
 		self.state = cs.Startup()
 
+	def run(self):
+		while True:
+			if str(self.state) == "Startup":
+				self.startup()
+			elif str(self.state) == "LogIn":
+				self.login()
+			elif str(self.state) == "MainMenu":
+				self.main_menu()
+			elif str(self.state) == "LoadGame":
+				self.load_game()
+				self.state = cs.Idle()
+			elif str(self.state) == "Idle":
+				self.game.update()
+				time.sleep(1)
+			elif str(self.state) == "GetUserData":
+				self.state = cs.LoggedIn()
+			elif str(self.state) == "WaitForOpponentMove":
+				pass
+			elif str(self.state) == "MoveReady":
+				pass
+			elif str(self.state) == "Exit":
+				self.exit()
+			else:
+				print("State error!")
+				exit()
+
+	def chessbox_welcome(self):
+		"""
+		Welcome screen for chessbox
+		"""
+		print("Welcome to chessbox live!")
+
 	def startup(self):
 		with open('user_data.json') as f:
 			self.user_data = json.load(f)
-		if not self.user_data["p1"]:
-			return False
-		else:
-			self.player_1 = User(self.user_data["p1"], self.user_data["p1_password"])
-			return True
+		self.chessbox_welcome()
+		self.state = self.load_user()
 
-	def login(self, username : str, password : str):
+	def load_user(self):
+		
+		while True:
+			if not self.user_data["p1"]:
+				"""
+				If primary user isn't saved, ask for login.
+				"""
+				return cs.LogIn()
+			else:
+				"""
+				If primary user is saved, ask if player would like to play as this user.
+				"""
+				yn = input("Play as " + self.user_data["p1"] + "? [y/n]: ") 
+				if yn == 'y':
+					self.player_1 = User(self.user_data["p1"], self.user_data["p1_password"])
+					return cs.MainMenu()
+				elif yn == 'n':
+					self.user_data["p1"] = ""
+					self.user_data["p1_password"] = ""
+					self.user_data["p2"] = ""
+					self.user_data["p2_password"] = ""
+					self.user_data["curr_game_url"] = ""
+					continue
+				else:
+					continue
+
+	def login(self):
+		print("Please enter chess.com user information:")
+		username = input("username: ")
+		while self.check_valid_username(username) == False:
+			print("Invalid username.")
+			username = input("username: ")
+		password = input("password: ")
+		while self.check_valid_password(password) == False:
+			print("Incorrect password.")
+			username = input("password: ")
 		self.user_data["p1"] = username
 		self.user_data["p1_password"] = password
-		self.player_1 = User(self.user_data["p1"], self.user_data["p1_password"])
-
-	def logout(self):
-		self.user_data["p1"] = ""
-		self.user_data["p1_password"] = ""
-		self.user_data["curr_game_url"] = ""
 		self.save_user()
+		self.player_1 = User(self.user_data["p1"], self.user_data["p1_password"])
+		self.state = cs.MainMenu()
 
-	def load_game_by_url(self, url : str):
-		game = self.player_1.get_game_by_url(url)
-		print(game)
-		white_str = game["white"]
-		black_str = game["black"]
-		player_white = white_str[33:len(white_str)]
-		player_black = black_str[33:len(black_str)]
-		if player_white == self.player_1.username:
-			self.user_data["p2"] = player_black
+	def main_menu(self):
+		print("0) Load Game")
+		print("1) View User Data")
+		print("2) Sign Out")
+		print("3) Exit")
+		option = input("Select an option: ")
+		if option == '0':
+			event = 'load_game'
+		elif option == '1':
+			event = 'get_user_data'
+		elif option == '2':
+			event = 'sign_out'
+		elif option == '3':
+			event = 'exit'
 		else:
-			self.user_data["p2"] = player_white
-		self.user_data["curr_game_url"] = game["url"]
-		self.user_data["round"] = 1
-		self.user_data["turn"] = 'w'
-		self.user_data["fen"] = ""
-		self.game = Game(self.player_1, self.player_2, self.user_data["curr_game_url"], self.user_data["round"], self.user_data["turn"], self.user_data["fen"])
+			event = ""
+		self.state = self.state.on_event(event)
 
 	def load_game(self):
 		"""
@@ -184,35 +245,23 @@ class User:
 
 	def get_games_wb_url(self):
 		"""
-		Returns dict of arrays including.
-			games_w: list of white players
-			games_b: list of black players
-			games_url: list of urls
-			games_wvb: list of strings in format "player_1 playing w/b against player_2"
-			games_fen: list of current fen
+		Returns list of games as strings with players associated with colors.
 		"""
 		games = self.get_current_games_list()
 		games_w = []
 		games_b = []
 		games_url = []
-		games_wvb = []
-		games_fen = []
 		index = 0
 		for game in games:
 			white_str = game["white"]
 			black_str = game["black"]
 			player_white = white_str[33:len(white_str)]
 			player_black = black_str[33:len(black_str)]
-			if player_white == self.username:
-				wvb = "Playing white against " + player_black + "."
-			else:
-				wvb = "Playing black against " + player_white + "."
 			games_w.append(player_white)
 			games_b.append(player_black)
 			games_url.append(game["url"])
-			games_wvb.append(wvb)
-			games_fen.append(game["fen"])
-		games_wb_url = {'w': games_w, 'b': games_b, 'url': games_url, 'wvb': games_wvb, 'fen': games_fen}
+
+		games_wb_url = {'w': games_w, 'b': games_b, 'url': games_url}
 		return games_wb_url
 
 	def get_game_by_url(self, url : str):
@@ -249,7 +298,7 @@ class User:
 		for i  in range(0,len(games_w)):
 			player_white = games_w[i]
 			player_black = games_b[i]
-			if player_white == self.username:       
+			if player_white == self.username:
 				print(str(i) + ") Playing white against " + player_black + ".")
 			else:
 				print(str(i) + ") Playing black against " + player_white + ".")

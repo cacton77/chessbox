@@ -1,6 +1,6 @@
 #testbox.py
 
-from chessbox import Chessbox
+from chessbox_cmd import Chessbox
 import chess
 import time
 
