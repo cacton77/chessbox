@@ -49,7 +49,6 @@ class Chessbox:
 
 	def load_game_by_url(self, url : str):
 		game = self.player_1.get_game_by_url(url)
-		print(game)
 		white_str = game["white"]
 		black_str = game["black"]
 		player_white = white_str[33:len(white_str)]

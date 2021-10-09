@@ -1,9 +1,5 @@
 #:kivy 2.0.0
 
-<BoxLayout>
-	
-	
-
 <LoginInput>
 	multiline: False
 	font_size: 20
@@ -39,23 +35,9 @@
 			font_size: 14
 			size_hint: (1, 0.2)
 	
-
 <GameCarousel>
 	direction: "bottom"
 	pos_hint: {'center_x': 0.5, 'center_y': 0.5}
-
-<GameBoard>
-
-	Label:
-		font: "DejaVuSans"
-		font_size: 20
-		size: root.height * 0.8, root.height * 0.8
-		text: "JLKSJDFLKJSDLKFJ"
-
-		canvas.before:
-			Rectangle:
-				source: "images/chessboard.jpg"
-				size: self.size
 
 <LoginScreen>
 
@@ -67,7 +49,7 @@
 		size: root.width, root.height
 		canvas.before:
 			Rectangle:
-				source: "images/greenfelt.png"
+				source: app.get_running_app().login_background_image
 				size: self.size
 				pos: self.pos
 		spacing: 10
@@ -106,7 +88,7 @@
 
 		canvas.before:
 			Rectangle:
-				source: "images/background.jpg"
+				source: app.get_running_app().background_image
 				size: self.size
 				pos: self.pos
 
@@ -115,20 +97,37 @@
 			direction: "right"
 			HomeScreenButton:
 				text: "Play"
+				color: root.button_text_color 
+				background_color: root.button_background_color
+				font_size: root.button_font_size
 				on_press:
 					root.manager.transition.direction = 'down'
             		root.manager.current = 'load'
 			HomeScreenButton:
 				text: "User"
+				color: root.button_text_color 
+				background_color: root.button_background_color
+				font_size: root.button_font_size
 				on_press: root.press()
 			HomeScreenButton:
 				text: "Settings"
-				on_press: root.press()
+				color: root.button_text_color 
+				background_color: root.button_background_color
+				font_size: root.button_font_size
+				on_press:
+					root.manager.transition.direction = 'down'
+            		root.manager.current = 'settings'
 			HomeScreenButton:
 				text: "Sign Out"
+				color: root.button_text_color 
+				background_color: root.button_background_color
+				font_size: root.button_font_size
 				on_press: root.logout_press()
 			HomeScreenButton:
 				text: "Exit"
+				color: root.button_text_color 
+				background_color: root.button_background_color
+				font_size: root.button_font_size
 				on_press: root.press()
 
 		BoxLayout:
@@ -140,15 +139,27 @@
 
 			Button:
 				text: "<-"
+				font_size: app.get_running_app().bb_font_size
+				color: app.get_running_app().bb_text_color
+				background_color: app.get_running_app().bb_background_color
 				on_press: carousel.load_previous()
 			Button:
 				text: "->"
+				font_size: app.get_running_app().bb_font_size
+				color: app.get_running_app().bb_text_color
+				background_color: app.get_running_app().bb_background_color
 				on_press: carousel.load_next(mode='next')
 			Button:
 				text: "o"
+				font_size: app.get_running_app().bb_font_size
+				color: app.get_running_app().bb_text_color
+				background_color: app.get_running_app().bb_background_color
 				on_press: carousel.current_slide.trigger_action(duration=0.1)
 			Button:
 				text: "x"
+				font_size: app.get_running_app().bb_font_size
+				color: app.get_running_app().bb_text_color
+				background_color: app.get_running_app().bb_background_color
 				on_press: 
 					root.manager.transition.direction = 'up'
             		root.manager.current = 'login'
@@ -159,7 +170,7 @@
 
 		canvas.before:
 			Rectangle:
-				source: "images/background.jpg"
+				source: app.get_running_app().background_image
 				size: self.size
 				pos: self.pos
 
@@ -175,15 +186,27 @@
 
 			Button:
 				text: "^"
+				font_size: app.get_running_app().bb_font_size
+				color: app.get_running_app().bb_text_color
+				background_color: app.get_running_app().bb_background_color
 				on_press: game_carousel.load_previous()
 			Button:
 				text: "v"
+				font_size: app.get_running_app().bb_font_size
+				color: app.get_running_app().bb_text_color
+				background_color: app.get_running_app().bb_background_color
 				on_press: game_carousel.load_next(mode='next')
 			Button:
 				text: "o"
+				font_size: app.get_running_app().bb_font_size
+				color: app.get_running_app().bb_text_color
+				background_color: app.get_running_app().bb_background_color
 				on_press: root.load_game("thing")
 			Button:
 				text: "x"
+				font_size: app.get_running_app().bb_font_size
+				color: app.get_running_app().bb_text_color
+				background_color: app.get_running_app().bb_background_color
 				on_press:
 					root.manager.transition.direction = 'up'
             		root.manager.current = 'home'
@@ -194,7 +217,7 @@
 
 		canvas.before:
 			Rectangle:
-				source: "images/background.jpg"
+				source: app.get_running_app().background_image
 				size: self.size
 				pos: self.pos
 
@@ -212,16 +235,75 @@
 
 			Button:
 				text: "<-"
+				font_size: app.get_running_app().bb_font_size
+				color: app.get_running_app().bb_text_color
+				background_color: app.get_running_app().bb_background_color
 				on_press: pass
 			Button:
 				text: "->"
+				font_size: app.get_running_app().bb_font_size
+				color: app.get_running_app().bb_text_color
+				background_color: app.get_running_app().bb_background_color
 				on_press: pass
 			Button:
 				text: "o"
+				font_size: app.get_running_app().bb_font_size
+				color: app.get_running_app().bb_text_color
+				background_color: app.get_running_app().bb_background_color
 				on_press: pass
 			Button:
 				text: "x"
+				font_size: app.get_running_app().bb_font_size
+				color: app.get_running_app().bb_text_color
+				background_color: app.get_running_app().bb_background_color
 				on_press: 
 					root.manager.transition.direction = 'up'
-            		root.manager.current = 'load'
-		
+					root.manager.current = 'load'
+
+<SettingsScreen>
+	FloatLayout:
+		size: root.width, root.height
+
+		canvas.before:
+			Rectangle:
+				source: app.get_running_app().background_image
+				size: self.size
+				pos: self.pos
+
+		Carousel:
+			id: settings_carousel
+			size_hint: 0.8, 0.8
+			pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+			
+			ColorPicker:
+
+
+		BoxLayout:
+			orientation: "horizontal"
+			pos_hint: {'x': 0, 'y': 0}
+			size_hint: (1, 0.1)
+			spacing: 0
+			padding: 0
+
+			Button:
+				text: "<-"
+				color: app.get_running_app().bb_text_color
+				background_color: app.get_running_app().bb_background_color
+				on_press: pass
+			Button:
+				text: "->"
+				color: app.get_running_app().bb_text_color
+				background_color: app.get_running_app().bb_background_color
+				on_press: pass
+			Button:
+				text: "o"
+				color: app.get_running_app().bb_text_color
+				background_color: app.get_running_app().bb_background_color
+				on_press: pass
+			Button:
+				text: "x"
+				color: app.get_running_app().bb_text_color
+				background_color: app.get_running_app().bb_background_color
+				on_press: 
+					root.manager.transition.direction = 'up'
+					root.manager.current = 'home'

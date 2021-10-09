@@ -2,17 +2,19 @@
 
 from kivy.app import App
 from kivy.config import Config
-from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
-from kivy.properties import ObjectProperty
-from kivy.lang import Builder
-from kivy.uix.carousel import Carousel
 from kivy.uix.label import Label
 from kivy.uix.image import Image
 from kivy.uix.button import Button
+from kivy.uix.carousel import Carousel
+from kivy.uix.textinput import TextInput
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.properties import ObjectProperty
+from kivy.properties import StringProperty
+from kivy.lang import Builder
 from kivy.graphics import Color, Rectangle
+
 from chess import Board
 from chessbox import Chessbox
 
@@ -80,21 +82,10 @@ class GameCarousel(Carousel):
 			button.write(board_string, p1vp2, url)
 			self.add_widget(button)
 
-class GameBoard(Widget):
-	def __init__(self, **kwargs):
-		super(GameBoard, self).__init__(**kwargs)
-		self.board = Board("rnbqkbnr/ppppppp1/7p/1p1p1p1p/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
-		self.strboard = self.board.unicode(invert_color = True, empty_square = "   ")
-		#self.label = Label(text=ascii(self.strboard))
-		self.label = Label(text=self.strboard)
-		self.label.font_name = 'DejaVuSans'
-		self.label.font_size = 20
-		self.board_background = Image(source='images/chessboard.jpg')
-		#self.add_widget(self.board_background)
-		self.add_widget(self.label)
-
-
 class LoginScreen(Screen):
+	text_color = (0, 0, 0, 1)
+	button_color = (0.1, 0.1, 0.1, 0.5)
+
 	def __init__(self, chessbox : Chessbox(), **kwargs):
 		super(LoginScreen, self).__init__(**kwargs)
 		self.chessbox = chessbox
@@ -139,9 +130,13 @@ class LoginScreen(Screen):
 		return True
 
 class HomeScreen(Screen):
+	button_text_color = (0.9, 0.9, 0.9, 1)
+	button_background_color = (0.1, 0.1, 0.1, 0.8)
+	button_font_size = 18
+
 	def __init__(self, chessbox : Chessbox(), **kwargs):
 		super(HomeScreen, self).__init__(**kwargs)
-		self.chessbox = chessbox		
+		self.chessbox = chessbox
 
 	def accept(self):
 		pass
@@ -157,6 +152,10 @@ class HomeScreen(Screen):
 		self.manager.current = "login"
 
 class LoadScreen(Screen):
+	button_text_color = (0.9, 0.9, 0.9, 1)
+	button_background_color = (0.1, 0.1, 0.1, 0.8)
+	button_font_size = 20
+
 	def __init__(self, chessbox : Chessbox(), **kwargs):
 		super(LoadScreen, self).__init__(**kwargs)
 		self.chessbox = chessbox
@@ -178,6 +177,10 @@ class LoadScreen(Screen):
 		self.manager.current = "game"
 
 class GameScreen(Screen):
+	button_text_color = (0.9, 0.9, 0.9, 1)
+	button_background_color = (0.1, 0.1, 0.1, 0.8)
+	button_font_size = 20
+
 	def __init__(self, chessbox : Chessbox(), **kwargs):
 		super(GameScreen, self).__init__(**kwargs)
 		self.chessbox = chessbox
@@ -186,11 +189,31 @@ class GameScreen(Screen):
 		board_string = self.chessbox.game.board.unicode(invert_color = True, empty_square = "X").replace("\n", "").replace(" ", "")
 		self.ids['board_grid'].write(board_string, font_size = 20)
 
+	def on_leave(self):
+		for child in [child for child in self.ids['board_grid'].children]:
+			self.ids['board_grid'].remove_widget(child)
+
 	def update(self):
 		pass
+
+class SettingsScreen(Screen):
+	button_text_color = (0.9, 0.9, 0.9, 1)
+	button_background_color = (0.1, 0.1, 0.1, 0.8)
+	button_font_size = 20
+
+	def __init__(self, chessbox : Chessbox(), **kwargs):
+		super(SettingsScreen, self).__init__(**kwargs)
+		self.chessbox = chessbox
 		
 
 class ChessboxApp(App):
+	login_background_image = "images/green_background.png"
+	background_image = "images/background_2.jpg"
+	
+	bb_text_color = (0.9, 0.9, 0.9, 1)
+	bb_background_color = (0.1, 0.1, 0.1, 0.8)
+	bb_font_size = 18
+
 	def build(self):
 		Config.set('graphics', 'resizable', '0')
 		Config.set('graphics', 'width', '320')
@@ -206,13 +229,8 @@ class ChessboxApp(App):
 			sm.add_widget(HomeScreen(self.chessbox, name='home'))
 		sm.add_widget(LoadScreen(self.chessbox, name='load'))
 		sm.add_widget(GameScreen(self.chessbox, name='game'))
+		sm.add_widget(SettingsScreen(self.chessbox, name='settings'))
 		return sm
-
-		"""
-
-				root.manager.transition.direction = 'down'
-            	root.manager.current = 'home'
-		"""
 
 if __name__ == '__main__':
 	ChessboxApp().run()
